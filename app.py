@@ -34,17 +34,18 @@ def getPersons():
     relationship = request.args.get('relationship')
     limit = 50
     skip = int(page) * limit
-    filter = None
+    filter = {}
     if(sex or race or relationship):
-        filter = {}
         if(sex):
             filter["sex"] = sex
         if(race):
             filter["race"] = race
         if(relationship):
             filter["relationship"] = relationship
-    res = dumps(list(persons.find(filter, None, skip, limit)))
-    return res
+    res = {}
+    res["data"] = list(persons.find(filter, None, skip, limit))
+    res["totalPages"] = int(persons.count_documents(filter)/50)
+    return dumps(res)
 
 if __name__ == "__main__":
     app.run(debug=True)
