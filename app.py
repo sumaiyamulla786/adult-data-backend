@@ -44,11 +44,12 @@ def getPersons():
     page = request.args.get('page')
     if (not page):
         page = '1'
+    page = int(page)
     sex = request.args.get('sex')
     race = request.args.get('race')
     relationship = request.args.get('relationship')
     limit = 50
-    skip = int(page) * limit
+    skip = (page - 1) * limit
     filter = {}
     if(sex or race or relationship):
         if(sex):
