@@ -50,30 +50,30 @@ def getPersons():
     relationship = request.args.get('relationship')
     limit = 50
     skip = (page - 1) * limit
-    filter = {}
+    searchFilter = {}
     if(sex or race or relationship):
         if(sex):
-            filter["sex"] = sex
+            searchFilter["sex"] = sex
         if(race):
-            filter["race"] = race
+            searchFilter["race"] = race
         if(relationship):
-            filter["relationship"] = relationship
+            searchFilter["relationship"] = relationship
     if(page == '1' and not sex and not race and not relationship):
         res = g.redis_db.get('initialPage')
         if(not res):
-            res = fetchPersons(persons, filter, page, skip, limit)
+            res = fetchPersons(persons, searchFilter, page, skip, limit)
             g.redis_db.set('initialPage', dumps(res))
         else:
             res = loads(res)
         return dumps(res)
     else:
-        res = fetchPersons(persons, filter, page, skip, limit)
+        res = fetchPersons(persons, searchFilter, page, skip, limit)
         return dumps(res)
     
-def fetchPersons(persons, filter, page, skip, limit):
+def fetchPersons(persons, searchFilter, page, skip, limit):
     res = {}
-    res["data"] = list(persons.find(filter, None, skip, limit))
-    res["totalPages"] = int(persons.count_documents(filter)/50)
+    res["data"] = list(persons.find(searchFilter, None, skip, limit))
+    res["totalPages"] = int(persons.count_documents(searchFilter)/50)
     res['nextPage'] =  (int(page) + 1) if(int(page) + 1 <= res["totalPages"]) else -1
     res['previousPage'] = (int(page) - 1) if(int(page) - 1 > 0) else -1
     return res
