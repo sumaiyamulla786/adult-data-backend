@@ -4,10 +4,13 @@ from helpers.helpers import getPersonsCount
 from helpers.db_helper import fetchPersons
 import json
 
-getCount = Blueprint('getCount', __name__)
+#create adult_data Bluprint 
+adult_data = Blueprint('adult_data', __name__)
 
-@getCount.route('/getCount', methods=['GET'])
-def show():
+# /getCount route for getting the total counts for generating bar graph and pie chart on frontend
+# used redis to cache the result once and retrieve it again and again as response is not changing
+@adult_data.route('/getCount', methods=['GET'])
+def getCount():
     res = g.redis_db.get('getCount')
     if(not res):
         db = g.db.adultDataDB
@@ -18,10 +21,11 @@ def show():
         res = json.loads(res)
     return dumps(res)
 
-getPersons = Blueprint('getPersons', __name__)
-
-@getPersons.route('/persons', methods=['GET'])
-def show():
+# /persons route for getting the adult_data rows with pagination and filtering support
+# caching the first request for page 1 without any filters, as it remains unchanged 
+# retrieve it from cache and respon with it for the first call from frontend
+@adult_data.route('/persons', methods=['GET'])
+def getPersons():
     db = g.db.adultDataDB
     persons = db.person
     page = request.args.get('page')
