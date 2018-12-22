@@ -1,83 +1,26 @@
-from flask import Flask, g, request
-from pymongo import MongoClient
-from helpers.helpers import getPersonsCount
-from bson.json_util import dumps, loads
+from flask import Flask, g
 from flask_cors import CORS
-import redis
-import json
+from helpers.config import Config
+from helpers.db_helper import connect_db, connect_redis
+from routes.routes import getCount, getPersons
 
 app = Flask(__name__)
 CORS(app)
-
-def connect_db():
-    return MongoClient("localhost", 27017)
-
-def connect_redis():
-    return redis.StrictRedis(host="localhost", port=6379, db=0)
+app.config.from_object(Config)
 
 @app.before_request
 def before_request():
-    g.redis_db = connect_redis()
-    g.db = connect_db()
+    g.redis_db = connect_redis(app)
+    g.db = connect_db(app)
 
 @app.teardown_request
 def teardown_request(exception):
     if hasattr(g,'db'):
         g.db.close()
 
-@app.route('/getCount', methods=['GET'])
-def getCount():
-    res = g.redis_db.get('getCount')
-    if(not res):
-        db = g.db.adultDataDB
-        persons = db.person
-        res = getPersonsCount(persons)
-        g.redis_db.set('getCount', json.dumps(res))
-    else:
-        res = json.loads(res)
-    return dumps(res)
-
-@app.route('/persons', methods=['GET'])
-def getPersons():
-    db = g.db.adultDataDB
-    persons = db.person
-    page = request.args.get('page')
-    if (not page):
-        page = '1'
-    page = int(page)
-    sex = request.args.get('sex')
-    race = request.args.get('race')
-    relationship = request.args.get('relationship')
-    limit = 50
-    skip = (page - 1) * limit
-    searchFilter = {}
-    if(sex or race or relationship):
-        if(sex):
-            searchFilter["sex"] = sex
-        if(race):
-            searchFilter["race"] = race
-        if(relationship):
-            searchFilter["relationship"] = relationship
-    if(page == '1' and not sex and not race and not relationship):
-        res = g.redis_db.get('initialPage')
-        if(not res):
-            res = fetchPersons(persons, searchFilter, page, skip, limit)
-            g.redis_db.set('initialPage', dumps(res))
-        else:
-            res = loads(res)
-        return dumps(res)
-    else:
-        res = fetchPersons(persons, searchFilter, page, skip, limit)
-        return dumps(res)
-    
-def fetchPersons(persons, searchFilter, page, skip, limit):
-    res = {}
-    res["data"] = list(persons.find(searchFilter, None, skip, limit))
-    res["totalPages"] = int(persons.count_documents(searchFilter)/50)
-    res['nextPage'] =  (int(page) + 1) if(int(page) + 1 <= res["totalPages"]) else -1
-    res['previousPage'] = (int(page) - 1) if(int(page) - 1 > 0) else -1
-    return res
+app.register_blueprint(getCount)
+app.register_blueprint(getPersons)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, threaded=True)
     
