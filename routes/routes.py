@@ -55,4 +55,20 @@ def getPersons():
         return dumps(res)
     else:
         res = fetchPersons(persons, searchFilter, page, skip, limit)
+ 
         return dumps(res)
+
+# handles all exception on both the routes and returns an internal server error message
+@adult_data.app_errorhandler(Exception)
+def handle_error(error):
+    message = 'internal server error'
+    status_code = 500
+    success = False
+    response = {
+        'success': success,
+        'error': {
+            'type': 'internal error',
+            'message': message
+        }
+    }
+    return dumps(response), status_code
